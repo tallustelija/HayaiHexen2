@@ -1,6 +1,8 @@
 /*
  * view.h -- player eye positioning
  * $Id$
+ * 
+ * tallustelija: added SCR_DrawSpeed (from Joequake)
  *
  * Copyright (C) 1996-1997  Id Software, Inc.
  *
@@ -40,6 +42,11 @@ void V_RenderView (void);
 void V_CalcBlend (void);
 float V_CalcRoll (vec3_t angles, vec3_t velocity);
 void V_UpdatePalette (void);
+
+/*
+	tallustelija
+*/
+void SCR_DrawSpeed(void);
 
 #endif	/* __HX2_VIEW_H */
 

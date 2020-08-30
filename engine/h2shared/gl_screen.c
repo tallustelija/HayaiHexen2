@@ -1,6 +1,8 @@
 /*
  * screen.c -- master for refresh, status bar, console, chat, notify, etc
  * $Id$
+ * 
+ * tallustelija: added SCR_DrawSpeed (from Joequake)
  *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
@@ -1333,6 +1335,13 @@ void SCR_UpdateScreen (void)
 		SCR_DrawTurtle();
 		SCR_DrawPause();
 		SCR_CheckDrawCenterString();
+
+		/*
+			tallustelija:
+			Speedmeter from JoeQuake
+		*/
+		SCR_DrawSpeed();
+
 		Sbar_Draw();
 		SCR_DrawFPS();
 

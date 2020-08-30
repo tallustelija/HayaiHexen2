@@ -1,6 +1,8 @@
 /*
  * view.c -- player eye positioning
  * $Id$
+ * 
+ * tallustelija: added SCR_DrawSpeed (from Joequake)
  *
  * The view is allowed to move slightly from it's true position
  * for bobbing, but if it exceeds 8 pixels linear distance
@@ -59,6 +61,19 @@ cvar_t	crosshair = {"crosshair", "0", CVAR_ARCHIVE};
 cvar_t	cl_crossx = {"cl_crossx", "0", CVAR_ARCHIVE};
 cvar_t	cl_crossy = {"cl_crossy", "0", CVAR_ARCHIVE};
 cvar_t	crosshaircolor = {"crosshaircolor", "75", CVAR_ARCHIVE}; // 79 seemed too bright
+
+/*
+	tallustelija:
+	Speedmeter from JoeQuake
+*/
+cvar_t	show_speed = { "show_speed", "0", CVAR_ARCHIVE };
+cvar_t	show_speed_XYonly = { "show_speed_XYonly", "1", CVAR_ARCHIVE };
+/*
+	tallustelija:
+	from NEAQUAKE
+	The interval at which the speed display on the HUD updates
+*/
+cvar_t show_speed_interval = { "show_speed_interval", "0.05", CVAR_ARCHIVE };
 
 
 //=============================================================================
@@ -1029,6 +1044,94 @@ static void V_CalcRefdef (void)
 }
 
 /*
+	tallustelija:
+	Speedmeter from JoeQuake
+*/
+/*
+==============
+SCR_DrawSpeed
+==============
+*/
+void SCR_DrawSpeed(void)
+{
+	int		x, y;
+	char		st[8];
+	float		speed, vspeed, speedunits;
+	vec3_t		vel;
+	static	float	maxspeed = 0, display_speed = -1;
+	static	double	lastrealtime = 0;
+
+	if (!show_speed.value)
+		return;
+
+	if (lastrealtime > realtime)
+	{
+		lastrealtime = 0;
+		display_speed = -1;
+		maxspeed = 0;
+	}
+
+	VectorCopy(cl.velocity, vel);
+	vspeed = vel[2];
+	if (show_speed_XYonly.value)
+	{
+		vel[2] = 0;
+	}
+	speed = VectorLength(vel);
+
+	if (speed > maxspeed)
+		maxspeed = speed;
+
+	if (display_speed >= 0)
+	{
+		sprintf(st, "%3d", (int)display_speed);
+
+		x = vid.width / 2 - 80;
+
+		if (scr_viewsize.value >= 120)
+			y = vid.height - sb_lines - 16 - 35;
+
+		if (scr_viewsize.value < 120)
+			y = vid.height - sb_lines - 8 * 5 - 35;
+
+		if (scr_viewsize.value < 110)
+			y = vid.height - sb_lines - 8 * 8 - 35;
+
+		if (cl.intermission)
+			y = vid.height - sb_lines - 16 - 35;
+
+		Draw_Fill(x, y - 1, 160, 1, 26);
+		Draw_Fill(x, y + 9, 160, 1, 26);
+		Draw_Fill(x + 32, y - 2, 1, 13, 26);
+		Draw_Fill(x + 64, y - 2, 1, 13, 26);
+		Draw_Fill(x + 96, y - 2, 1, 13, 26);
+		Draw_Fill(x + 128, y - 2, 1, 13, 26);
+
+		Draw_Fill(x, y, 160, 9, 100);
+
+		speedunits = display_speed;
+		if (display_speed <= 500)
+		{
+			Draw_Fill(x, y, (int)(display_speed / 3.125), 9, 165);
+		}
+		else
+		{
+			while (speedunits > 500)
+				speedunits -= 500;
+			Draw_Fill(x, y, (int)(speedunits / 3.125), 9, 132);
+		}
+		Draw_String(x + 36 - strlen(st) * 8, y, st);
+	}
+
+	if (realtime - lastrealtime >= show_speed_interval.value)
+	{
+		lastrealtime = realtime;
+		display_speed = maxspeed;
+		maxspeed = 0;
+	}
+}
+
+/*
 ==================
 V_RenderView
 
@@ -1097,6 +1200,14 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_crossx);
 	Cvar_RegisterVariable (&cl_crossy);
 	Cvar_RegisterVariable (&crosshaircolor);
+
+	/*
+		tallustelija:
+		Speedmeter from JoeQuake, NEAQUAKE
+	*/
+	Cvar_RegisterVariable(&show_speed);
+	Cvar_RegisterVariable(&show_speed_XYonly);
+	Cvar_RegisterVariable(&show_speed_interval);
 
 	Cvar_RegisterVariable (&scr_ofsx);
 	Cvar_RegisterVariable (&scr_ofsy);
