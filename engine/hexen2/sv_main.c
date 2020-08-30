@@ -2,6 +2,8 @@
  * sv_main.c -- server main program
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -60,6 +62,12 @@ int		sv_kingofhill;		/* mission pack, king of the hill. */
 unsigned int	info_mask, info_mask2;	/* mission pack, objectives */
 
 extern float	scr_centertime_off;
+
+/*
+	tallustelija:
+	cl_independentphysics from JoeQuake
+*/
+extern cvar_t cl_independentphysics;
 
 //============================================================================
 
@@ -444,7 +452,28 @@ static void SV_SendServerinfo (client_t *client)
 	char			message[2048];
 
 	MSG_WriteByte (&client->message, svc_print);
-	sprintf (message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, ENGINE_VERSION, pr_crc);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	if ((cl_maxfps.value > 72))
+	{
+		//sprintf (message, "%c\nVERSION %4.2f SERVER (%i CRC)\n\ncl_maxfps is %4.2f, higher than the default of 72", 2, ENGINE_VERSION, pr_crc, cl_maxfps.value);
+		if (cl_independentphysics.value)
+		{
+			sprintf(message, "%c\nVERSION %4.2f SERVER (%i CRC)\n\ncl_maxfps is %4.2f, higher than the default of 72!\nBut cl_independentphysics is 1, so it should be ok!",
+				2, ENGINE_VERSION, pr_crc, cl_maxfps.value);
+		}
+		else
+		{
+			sprintf(message, "%c\nVERSION %4.2f SERVER (%i CRC)\n\ncl_maxfps is %4.2f, higher than the default of 72!\nCvar cl_independentphysics is 0, physics are different than default!",
+				2, ENGINE_VERSION, pr_crc, cl_maxfps.value);
+		}
+	}
+	else
+	{
+		sprintf(message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, ENGINE_VERSION, pr_crc);
+	}
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
@@ -1938,6 +1967,13 @@ void SV_SpawnServer (const char *server, const char *startspot)
 	edict_t		*ent;
 	int			i;
 
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	extern double sv_frametime;
+	extern double physframetime;
+
 	// let's not have any servers with no name
 	if (hostname.string[0] == 0)
 		Cvar_Set ("hostname", "UNNAMED");
@@ -2103,7 +2139,16 @@ void SV_SpawnServer (const char *server, const char *startspot)
 	sv.state = ss_active;
 
 // run two frames to allow everything to settle
-	host_frametime = 0.1;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	physframetime = 0.1;	// tallustelija: += here crashed on the map romeroc5 on load
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	sv_frametime = physframetime;
 	SV_Physics ();
 	SV_Physics ();
 

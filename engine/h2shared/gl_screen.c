@@ -3,6 +3,7 @@
  * $Id$
  * 
  * tallustelija: added SCR_DrawSpeed (from Joequake)
+ *				 Changes for cl_independentphysics (from JoeQuake)
  *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
@@ -534,27 +535,21 @@ static void SCR_DrawNet (void)
 
 static void SCR_DrawFPS (void)
 {
-	static double	oldtime = 0;
-	static double	lastfps = 0;
-	static int	oldframecount = 0;
-	double	elapsed_time;
-	int	frames;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	float t;
+	static float	lastfps = 0;
+	static double	lastframetime;
+	extern int		fps_count;
 
-	elapsed_time = realtime - oldtime;
-	frames = r_framecount - oldframecount;
-
-	if (elapsed_time < 0 || frames < 0)
+	t = Sys_DoubleTime();
+	if ((t - lastframetime) >= 1.0)
 	{
-		oldtime = realtime;
-		oldframecount = r_framecount;
-		return;
-	}
-	// update value every 3/4 second
-	if (elapsed_time > 0.75)
-	{
-		lastfps = frames / elapsed_time;
-		oldtime = realtime;
-		oldframecount = r_framecount;
+		lastfps = fps_count / (t - lastframetime);
+		fps_count = 0;
+		lastframetime = t;
 	}
 
 	if (scr_showfps.integer)

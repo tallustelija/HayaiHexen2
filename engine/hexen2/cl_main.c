@@ -2,6 +2,8 @@
  * cl_main.c -- hexen2 client main loop
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -60,6 +62,14 @@ dlight_t	cl_dlights[MAX_DLIGHTS];
 
 int		cl_numvisedicts;
 entity_t	*cl_visedicts[MAX_VISEDICTS];
+
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+cvar_t cl_independentphysics = { "cl_independentphysics", "1", CVAR_ARCHIVE };
+extern qboolean physframe;
+extern double physframetime;
 
 
 /*
@@ -471,7 +481,11 @@ static float CL_LerpPoint (void)
 
 	f = cl.mtime[0] - cl.mtime[1];
 
-	if (!f || cl_nolerp.integer || cls.timedemo || sv.active)
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	if (!f || cl_nolerp.integer || cls.timedemo || (sv.active && (!cl_independentphysics.value || host_frametime > 1.0 / 72.0))) 
 	{
 		cl.time = cl.mtime[0];
 		return 1;
@@ -846,7 +860,12 @@ static void CL_RelinkEntities (void)
 #		endif
 		}
 
-		ent->forcelink = false;
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		if (!cl_independentphysics.value)
+			ent->forcelink = false;
 
 		if (i == cl.viewentity && !chase_active.integer)
 			continue;
@@ -1002,6 +1021,16 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&m_side);
 
 	Cvar_RegisterVariable (&cfg_unbindall);
+
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	Cvar_RegisterVariable(&cl_independentphysics);
+	if (COM_CheckParm("-noindphys"))
+	{
+		Cvar_SetValue(&cl_independentphysics, 0);
+	}
 
 	Cmd_AddCommand ("entities", CL_PrintEntities_f);
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
