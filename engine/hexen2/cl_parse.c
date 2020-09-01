@@ -2,6 +2,8 @@
  * cl_parse.c -- parse a message received from the server
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -441,6 +443,12 @@ static void CL_ParseUpdate (int bits)
 	int		num;
 	entity_state2_t *ref_ent, *set_ent, build_ent, dummy;
 
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	extern cvar_t cl_independentphysics;
+
 	if (cls.signon == SIGNONS - 1)
 	{	// first update is the final signon stage
 		cls.signon = SIGNONS;
@@ -512,6 +520,13 @@ static void CL_ParseUpdate (int bits)
 	}
 
 	*set_ent = *ref_ent;
+
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	if (cl_independentphysics.value)
+		ent->forcelink = false;
 
 	if (ent->msgtime != cl.mtime[1])
 		forcelink = true;	// no previous frame to lerp from

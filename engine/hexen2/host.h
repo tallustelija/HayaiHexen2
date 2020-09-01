@@ -2,6 +2,8 @@
  * host.h -- public host structures and functions
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -52,6 +54,12 @@ extern	cvar_t		sys_throttle;
 extern	cvar_t		sys_nostdout;
 extern	cvar_t		developer;
 
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+extern	cvar_t		cl_maxfps;
+
 extern	cvar_t		pausable;
 
 extern	qboolean	host_initialized;	// true if into command execution
@@ -61,6 +69,12 @@ extern	byte		*host_colormap;
 extern	int		host_framecount;	// incremented every frame, never reset
 extern	double		realtime;		// not bounded in any way, changed at
 						// start of every frame, never reset
+
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+extern	double	physframetime;
 
 void Host_Init (void);
 void Host_InitCommands (void);
@@ -84,6 +98,12 @@ void Host_RemoveGIPFiles (const char *path);
 void Host_DeleteSave (const char *savepath);
 int Host_CopyFiles(const char *source, const char *pat, const char *dest);
 int SaveGamestate (qboolean ClientsOnly);
+
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+void Host_ServerFrame(double time);
 
 
 extern	int		current_skill;	// skill level for currently loaded level (in case

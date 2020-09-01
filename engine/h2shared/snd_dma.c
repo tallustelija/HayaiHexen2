@@ -2,6 +2,8 @@
  * snd_dma.c -- main control for any streaming sound output device
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-2001 Id Software, Inc.
  * Copyright (C) 2010-2011 O. Sezer <sezero@users.sourceforge.net>
  *
@@ -772,13 +774,21 @@ static void S_UpdateAmbientSounds (void)
 	// don't adjust volume too fast
 		if (chan->master_vol < vol)
 		{
-			chan->master_vol += (int) (host_frametime * ambient_fade.value);
+			/*
+				tallustelija:
+				cl_independentphysics
+			*/
+			chan->master_vol += (int)(physframetime * ambient_fade.value);
 			if (chan->master_vol > vol)
 				chan->master_vol = vol;
 		}
 		else if (chan->master_vol > vol)
 		{
-			chan->master_vol -= (int) (host_frametime * ambient_fade.value);
+			/*
+				tallustelija:
+				cl_independentphysics
+			*/
+			chan->master_vol -= (int)(physframetime * ambient_fade.value);
 			if (chan->master_vol < vol)
 				chan->master_vol = vol;
 		}

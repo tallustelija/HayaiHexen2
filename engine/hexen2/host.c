@@ -2,6 +2,8 @@
  * host.c -- coordinates spawning and killing of local servers
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  * Copyright (C) 2001 contributors of the Anvil of Thyrion project
@@ -43,6 +45,12 @@
 
 static void Host_WriteConfiguration (const char *fname);
 
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+extern cvar_t cl_independentphysics;
+
 quakeparms_t	*host_parms;
 
 qboolean	host_initialized;		// true if into command execution
@@ -51,8 +59,16 @@ static jmp_buf	host_abort;
 
 double		host_frametime;
 double		realtime;			// without any filtering or bounding
-static double	oldrealtime;			// last frame run
-int		host_framecount;
+int			host_framecount;
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+double		host_time;
+double		oldrealtime;			// last frame run
+double		oldphysrealtime;
+qboolean	physframe;
+double		physframetime;
 
 int		host_hunklevel;
 
@@ -65,6 +81,13 @@ cvar_t		sys_ticrate = {"sys_ticrate", "0.05", CVAR_NONE};
 static	cvar_t	sys_adaptive = {"sys_adaptive", "1", CVAR_ARCHIVE};
 static	cvar_t	host_framerate = {"host_framerate", "0", CVAR_NONE};	// set for slow motion
 static	cvar_t	host_speeds = {"host_speeds", "0", CVAR_NONE};		// set for running times
+
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+cvar_t cl_maxfps = { "cl_maxfps", "72", CVAR_ARCHIVE }; // sets MAX FPS 
+int		fps_count;
 
 static	cvar_t	serverprofile = {"serverprofile", "0", CVAR_NONE};
 
@@ -373,6 +396,12 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	Cvar_RegisterVariable(&cl_maxfps);
+
 	Cvar_RegisterVariable (&serverprofile);
 
 	Cvar_RegisterVariable (&fraglimit);
@@ -656,6 +685,21 @@ void Host_ClearMemory (void)
 
 //============================================================================
 
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+/*
+===================
+MinPhysFrameTime
+===================
+*/
+static double MinPhysFrameTime(void)
+{
+	double physfps = !cl_maxfps.value ? 72 : bound(10, cl_maxfps.value, 72);
+
+	return 1.0 / physfps;
+}
 
 /*
 ===================
@@ -664,27 +708,46 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
-static qboolean Host_FilterTime (float time)
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+static qboolean Host_FilterTime (double time)
 {
+	qboolean result;
+	double	frametime, minphysframetime;
+
 	realtime += time;
 
-	if (!cls.timedemo && realtime - oldrealtime < 1.0/72.0)
-		return false;		// framerate is too high
-
-	host_frametime = realtime - oldrealtime;
-	oldrealtime = realtime;
-
 	if (host_framerate.value > 0)
-		host_frametime = host_framerate.value;
+		frametime = MinPhysFrameTime();
 	else
-	{	// don't allow really long or short frames
-		if (host_frametime > 0.05 && !sys_adaptive.integer)
-			host_frametime = 0.05;
-		if (host_frametime < 0.001)
-			host_frametime = 0.001;
+		frametime = 1.0 / (!cl_maxfps.value ? 1000 : bound(10, cl_maxfps.value, 1000));
+
+	result = false;
+
+	if (cls.timedemo || realtime - oldrealtime >= frametime)
+	{
+		host_frametime = realtime - oldrealtime;
+		oldrealtime = realtime;
+
+		if (host_framerate.value > 0)
+			host_frametime = host_framerate.value;
+		else
+			// don't allow really long or short frames
+			host_frametime = bound(0.001, host_frametime, 0.1);
+
+		result = true;
 	}
 
-	return true;
+	minphysframetime = MinPhysFrameTime();
+	if (cls.timedemo || realtime - oldphysrealtime >= minphysframetime)
+	{
+		physframetime = realtime - oldphysrealtime;
+		oldphysrealtime = realtime;
+	}
+
+	return result;
 }
 
 
@@ -715,88 +778,42 @@ static void Host_GetConsoleCommands (void)
 //#define FPS_20
 
 /*
+	tallustelija:
+	cl_independentphysics
+*/
+/*
 ==================
 Host_ServerFrame
 
 ==================
 */
-#ifdef FPS_20
 
-static void _Host_ServerFrame (void)
+static void Host_ServerFrame(double time)
 {
-// run the world state
-	*sv_globals.frametime = host_frametime;
+	extern double sv_frametime;
 
-// read client messages
-	SV_RunClients ();
+	sv_frametime = time;
 
-// move things around and think
-// always pause in single player if in console or menus
+	// run the world state
+	*sv_globals.frametime = sv_frametime;
+
+	// set the time and clear the general datagram
+	SV_ClearDatagram();
+
+	// check for new clients
+	SV_CheckForNewClients();
+
+	// read client messages
+	SV_RunClients();
+
+	// move things around and think
+	// always pause in single player if in console or menus
 	if (!sv.paused && (svs.maxclients > 1 || Key_GetDest() == key_game))
-	{
-		SV_Physics ();
+		SV_Physics();
 
-		R_UpdateParticles ();
-		CL_UpdateEffects ();
-	}
+	// send all messages to the clients
+	SV_SendClientMessages();
 }
-
-static void Host_ServerFrame (void)
-{
-	float	save_host_frametime;
-	float	temp_host_frametime;
-
-// run the world state
-	*sv_globals.frametime = host_frametime;
-
-// set the time and clear the general datagram
-	SV_ClearDatagram ();
-
-// check for new clients
-	SV_CheckForNewClients ();
-
-	temp_host_frametime = save_host_frametime = host_frametime;
-	while (temp_host_frametime > (1.0/72.0))
-	{
-		if (temp_host_frametime > 0.05)
-			host_frametime = 0.05;
-		else
-			host_frametime = temp_host_frametime;
-		temp_host_frametime -= host_frametime;
-		_Host_ServerFrame ();
-	}
-	host_frametime = save_host_frametime;
-
-// send all messages to the clients
-	SV_SendClientMessages ();
-}
-
-#else
-
-static void Host_ServerFrame (void)
-{
-// run the world state
-	*sv_globals.frametime = host_frametime;
-
-// set the time and clear the general datagram
-	SV_ClearDatagram ();
-
-// check for new clients
-	SV_CheckForNewClients ();
-
-// read client messages
-	SV_RunClients ();
-
-// move things around and think
-// always pause in single player if in console or menus
-	if (!sv.paused && (svs.maxclients > 1 || Key_GetDest() == key_game))
-		SV_Physics ();
-
-// send all messages to the clients
-	SV_SendClientMessages ();
-}
-
-#endif
 
 /*
 ==================
@@ -805,15 +822,17 @@ Host_Frame
 Runs all active servers
 ==================
 */
+/*
+	tallustelija:
+	cl_independentphysics
+*/
 static void _Host_Frame (float time)
 {
 	static double		time1 = 0;
 	static double		time2 = 0;
 	static double		time3 = 0;
 	int			pass1, pass2, pass3;
-#if !defined(FPS_20)
-	double	save_host_frametime,total_host_frametime;
-#endif
+	static double extraphysframetime;
 
 	if (setjmp(host_abort))
 		return;			// something bad happened, or the server disconnected
@@ -825,132 +844,132 @@ static void _Host_Frame (float time)
 	if (!Host_FilterTime (time))
 		return;			// don't run too fast, or packets will flood out
 
-// get new key events
-	Sys_SendKeyEvents ();
-
-// allow mice or other external controllers to add commands
-	IN_Commands ();
-
-// process console commands
-	Cbuf_Execute ();
-
-	NET_Poll();
-
-// if running the server locally, make intentions now
-	if (sv.active)
-		CL_SendCmd ();
-
-//-------------------
-//
-// server operations
-//
-//-------------------
-
-// check for commands typed to the host
-	Host_GetConsoleCommands ();
-
-#ifdef FPS_20
-	if (sv.active)
-		Host_ServerFrame ();
-
-//-------------------
-//
-// client operations
-//
-//-------------------
-
-// if running the server remotely, send intentions now after
-// the incoming messages have been read
-	if (!sv.active)
-		CL_SendCmd ();
-
-// fetch results from server
-	if (cls.state == ca_connected)
-		CL_ReadFromServer ();
-
-#else
-
-	save_host_frametime = total_host_frametime = host_frametime;
-	if (sys_adaptive.integer)
+	if (!cl_independentphysics.value || host_framerate.value > 0)
 	{
-		if (host_frametime > 0.05)
-			host_frametime = 0.05;
+		physframe = true;
+		physframetime = host_frametime;
+		extraphysframetime = 0;
+	}
+	else
+	{
+		extraphysframetime += host_frametime;
+		if (extraphysframetime < physframetime)
+		{
+			physframe = false;
+		}
+		else
+		{
+			physframe = true;
+			extraphysframetime -= physframetime;
+		}
 	}
 
-	if (total_host_frametime > 1.0)
-		total_host_frametime = 0.05;
-
-	do
+	if (!cl_independentphysics.value || physframe)
 	{
+		// get new key events
+		Sys_SendKeyEvents();
+
+		// allow mice or other external controllers to add commands
+		IN_Commands();
+
+		// process console commands
+		Cbuf_Execute();
+
+		NET_Poll();
+
+		// if running the server locally, make intentions now
 		if (sv.active)
-			Host_ServerFrame ();
+			CL_SendCmd();
 
-	//-------------------
-	//
-	// client operations
-	//
-	//-------------------
+		//-------------------
+		//
+		// server operations
+		//
+		//-------------------
 
-	// if running the server remotely, send intentions now after
-	// the incoming messages have been read
+		// check for commands typed to the host
+		Host_GetConsoleCommands();
+
+		if (sv.active)
+			Host_ServerFrame(physframetime);
+
+		//-------------------
+		//
+		// client operations
+		//
+		//-------------------
+
+		// if running the server remotely, send intentions now after
+		// the incoming messages have been read
 		if (!sv.active)
-			CL_SendCmd ();
+			CL_SendCmd();
 
-	// fetch results from server
+		host_time += host_frametime;
+
+		// fetch results from server
 		if (cls.state == ca_connected)
-			CL_ReadFromServer ();
+			CL_ReadFromServer();
 
-		R_UpdateParticles ();
-		CL_UpdateEffects ();
-
-		if (!sys_adaptive.integer)
-			break;
-
-		total_host_frametime -= 0.05;
-		if (total_host_frametime > 0 && total_host_frametime < 0.05)
+		if (cls.state == ca_disconnected) // We need to move the mouse also when disconnected
 		{
-			save_host_frametime -= total_host_frametime;
-			oldrealtime -= total_host_frametime;
-			break;
+			usercmd_t dummy;
+			IN_Move(&dummy);
 		}
 
-	} while (total_host_frametime > 0);
+		R_UpdateParticles();
+		CL_UpdateEffects();
+	}
+	else
+	{
+		host_time += host_frametime;
 
-	host_frametime = save_host_frametime;
-#endif
+		// fetch results from server
+		if (cls.state == ca_connected)
+			CL_ReadFromServer();
 
-// update video
+		if (!cls.demoplayback || // not demo playback
+			cls.state == ca_disconnected // We need to move the mouse also when disconnected 
+			)
+		{
+			usercmd_t dummy;
+			Sys_SendKeyEvents();
+			IN_Move(&dummy);
+		}
+	}
+
+	// update video
 	if (host_speeds.integer)
-		time1 = Sys_DoubleTime ();
+		time1 = Sys_DoubleTime();
 
-	SCR_UpdateScreen ();
+	SCR_UpdateScreen();
 
 	if (host_speeds.integer)
-		time2 = Sys_DoubleTime ();
+		time2 = Sys_DoubleTime();
 
-// update audio
+	// update audio
 	BGM_Update();	// adds music raw samples and/or advances midi driver
 	if (cls.signon == SIGNONS)
 	{
-		S_Update (r_origin, vpn, vright, vup);
-		CL_DecayLights ();
+		S_Update(r_origin, vpn, vright, vup);
+		CL_DecayLights();
 	}
 	else
-		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
+		S_Update(vec3_origin, vec3_origin, vec3_origin, vec3_origin);
 
 	CDAudio_Update();
 
 	if (host_speeds.integer)
 	{
-		pass1 = (time1 - time3)*1000;
-		time3 = Sys_DoubleTime ();
-		pass2 = (time2 - time1)*1000;
-		pass3 = (time3 - time2)*1000;
-		Con_Printf ("%3i tot %3i server %3i gfx %3i snd\n",
-					pass1+pass2+pass3, pass1, pass2, pass3);
+		pass1 = (time1 - time3) * 1000;
+		time3 = Sys_DoubleTime();
+		pass2 = (time2 - time1) * 1000;
+		pass3 = (time3 - time2) * 1000;
+		Con_Printf("%3i tot %3i server %3i gfx %3i snd\n",
+			pass1 + pass2 + pass3, pass1, pass2, pass3);
 	}
 
 	host_framecount++;
+	fps_count++;
 }
 
 void Host_Frame (float time)

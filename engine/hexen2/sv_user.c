@@ -2,6 +2,8 @@
  * sv_user.c -- server code for moving users
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -43,6 +45,13 @@ static	usercmd_t	cmd;
 
 cvar_t	sv_idealpitchscale = {"sv_idealpitchscale", "0.8", CVAR_NONE};
 cvar_t	sv_idealrollscale = {"sv_idealrollscale", "0.8", CVAR_NONE};
+
+
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+extern double sv_frametime;
 
 #if defined(SERVERONLY)
 static	cvar_t	cl_rollspeed = {"cl_rollspeed", "200", CVAR_NONE};
@@ -197,7 +206,11 @@ static void SV_UserFriction (void)
 
 	// apply friction
 	control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
-	newspeed = speed - host_frametime*control*friction;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	newspeed = speed - sv_frametime*control*friction;
 
 	if (newspeed < 0)
 		newspeed = 0;
@@ -237,7 +250,11 @@ static void SV_Accelerate (vec3_t wishvel)
 	VectorSubtract (wishvel, velocity, pushvec);
 	addspeed = VectorNormalize (pushvec);
 
-	accelspeed = sv_accelerate.value*host_frametime*addspeed;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	accelspeed = sv_accelerate.value*sv_frametime*addspeed;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -254,7 +271,11 @@ static void SV_Accelerate (float wishspeed, const vec3_t wishdir)
 	addspeed = wishspeed - currentspeed;
 	if (addspeed <= 0)
 		return;
-	accelspeed = sv_accelerate.value*host_frametime*wishspeed;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	accelspeed = sv_accelerate.value*sv_frametime*wishspeed;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -275,8 +296,12 @@ static void SV_AirAccelerate (float wishspeed, vec3_t wishveloc)
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
-//	accelspeed = sv_accelerate.value * host_frametime;
-	accelspeed = sv_accelerate.value*wishspeed * host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+//	accelspeed = sv_accelerate.value * sv_frametime;
+	accelspeed = sv_accelerate.value*wishspeed * sv_frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -291,7 +316,11 @@ static void DropPunchAngle (void)
 
 	len = VectorNormalize (sv_player->v.punchangle);
 
-	len -= 10*host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	len -= 10*sv_frametime;
 	if (len < 0)
 		len = 0;
 	VectorScale (sv_player->v.punchangle, len, sv_player->v.punchangle);
@@ -338,7 +367,11 @@ static void SV_FlightMove (void)
 	speed = VectorLength (velocity);
 	if (speed)
 	{
-		newspeed = speed - host_frametime * speed * sv_friction.value;
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		newspeed = speed - sv_frametime * speed * sv_friction.value;
 		if (newspeed < 0)
 			newspeed = 0;
 		VectorScale (velocity, newspeed/speed, velocity);
@@ -357,7 +390,11 @@ static void SV_FlightMove (void)
 		return;
 
 	VectorNormalize (wishvel);
-	accelspeed = sv_accelerate.value * wishspeed * host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	accelspeed = sv_accelerate.value * wishspeed * sv_frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -419,7 +456,11 @@ static void SV_WaterMove (void)
 	speed = VectorLength (velocity);
 	if (speed)
 	{
-		newspeed = speed - host_frametime * speed * sv_friction.value;
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		newspeed = speed - sv_frametime * speed * sv_friction.value;
 		if (newspeed < 0)
 			newspeed = 0;
 		VectorScale (velocity, newspeed/speed, velocity);
@@ -438,7 +479,11 @@ static void SV_WaterMove (void)
 		return;
 
 	VectorNormalize (wishvel);
-	accelspeed = sv_accelerate.value * wishspeed * host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	accelspeed = sv_accelerate.value * wishspeed * sv_frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 

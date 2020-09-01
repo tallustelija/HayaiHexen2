@@ -2,6 +2,8 @@
  * common.h -- misc utilities used in client and server
  * $Id$
  *
+ * tallustelija: bound function definition
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 2008-2012  O.Sezer <sezero@users.sourceforge.net>
  *
@@ -37,6 +39,8 @@
 #define	X_OK	1		/* Test for execute permission.  */
 #define	F_OK	0		/* Test for existence.  */
 #endif
+
+#define bound(a, b, c) ((a) >= (c) ? (a) : (b) < (a) ? (a) : (b) > (c) ? (c) : (b))	// tallustelija
 
 #ifdef _MSC_VER	/* MS Visual C */
 /* disable some silent conversion warnings */

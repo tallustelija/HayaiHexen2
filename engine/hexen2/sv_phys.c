@@ -2,6 +2,8 @@
  * sv_phys.c -- sv physics
  * $Id$
  *
+ * tallustelija: Changes for cl_independentphysics (from JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -54,6 +56,12 @@ cvar_t	sv_walkpitch		= { "sv_walkpitch", "0", CVAR_NONE };
 #ifdef QUAKE2
 static	vec3_t	vec_origin = {0.0, 0.0, 0.0};
 #endif
+
+/*
+	tallustelija:
+	cl_independentphysics
+*/
+double	sv_frametime;
 
 #define	MOVE_EPSILON	0.01
 
@@ -141,7 +149,11 @@ static qboolean SV_RunThink (edict_t *ent)
 	float	thinktime;
 
 	thinktime = ent->v.nextthink;
-	if (thinktime <= 0 || thinktime > sv.time + host_frametime)
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	if (thinktime <= 0 || thinktime > sv.time + sv_frametime)
 		return true;
 
 	if (thinktime < sv.time)
@@ -447,7 +459,11 @@ static void SV_AddGravity (edict_t *ent)
 		ent_gravity = 1.0;
 #endif
 
-	ent->v.velocity[2] -= ent_gravity * sv_gravity.value * host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	ent->v.velocity[2] -= ent_gravity * sv_gravity.value * sv_frametime;
 }
 
 
@@ -1283,14 +1299,22 @@ static void SV_Physics_Pusher (edict_t *ent)
 	oldltime = ent->v.ltime;
 
 	thinktime = ent->v.nextthink;
-	if (thinktime < ent->v.ltime + host_frametime)
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	if (thinktime < ent->v.ltime + sv_frametime)
 	{
 		movetime = thinktime - ent->v.ltime;
 		if (movetime < 0)
 			movetime = 0;
 	}
 	else
-		movetime = host_frametime;
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		movetime = sv_frametime;
 
 	if (movetime)
 	{
@@ -1578,7 +1602,11 @@ static void SV_WalkMove (edict_t *ent)
 	VectorCopy (ent->v.origin, oldorg);
 	VectorCopy (ent->v.velocity, oldvel);
 
-	clip = SV_FlyMove (ent, host_frametime, &steptrace);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	clip = SV_FlyMove (ent, sv_frametime, &steptrace);
 
 	if ( !(clip & 2) )
 		return;		// move didn't block on a step
@@ -1606,7 +1634,11 @@ static void SV_WalkMove (edict_t *ent)
 	VectorClear (upmove);
 	VectorClear (downmove);
 	upmove[2] = STEPSIZE;
-	downmove[2] = -STEPSIZE + oldvel[2]*host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	downmove[2] = -STEPSIZE + oldvel[2]*sv_frametime;
 
 // move up
 	SV_PushEntity (ent, upmove);	// FIXME: don't link?
@@ -1615,7 +1647,11 @@ static void SV_WalkMove (edict_t *ent)
 	ent->v.velocity[0] = oldvel[0];
 	ent->v. velocity[1] = oldvel[1];
 	ent->v. velocity[2] = 0;
-	clip = SV_FlyMove (ent, host_frametime, &steptrace);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	clip = SV_FlyMove (ent, sv_frametime, &steptrace);
 
 // check for stuckness, possibly due to the limited precision of floats
 // in the clipping hulls
@@ -1714,14 +1750,26 @@ static void SV_Physics_Client (edict_t *ent, int num)
 		if (!SV_RunThink (ent))
 			return;
 		SV_CheckWater (ent);
-		SV_FlyMove (ent, host_frametime, NULL);
-		SV_FlyExtras (ent, host_frametime, NULL);  // Hover & friction
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		SV_FlyMove (ent, sv_frametime, NULL);
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		SV_FlyExtras (ent, sv_frametime, NULL);  // Hover & friction
 		break;
 
 	case MOVETYPE_NOCLIP:
 		if (!SV_RunThink (ent))
 			return;
-		VectorMA (ent->v.origin, host_frametime, ent->v.velocity, ent->v.origin);
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		VectorMA (ent->v.origin, sv_frametime, ent->v.velocity, ent->v.origin);
 		break;
 
 	default:
@@ -1786,8 +1834,16 @@ static void SV_Physics_Noclip (edict_t *ent)
 	if (!SV_RunThink (ent))
 		return;
 
-	VectorMA (ent->v.angles, host_frametime, ent->v.avelocity, ent->v.angles);
-	VectorMA (ent->v.origin, host_frametime, ent->v.velocity, ent->v.origin);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	VectorMA (ent->v.angles, sv_frametime, ent->v.avelocity, ent->v.angles);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	VectorMA (ent->v.origin, sv_frametime, ent->v.velocity, ent->v.origin);
 
 	SV_LinkEdict (ent, false);
 }
@@ -1908,13 +1964,21 @@ static void SV_Physics_Toss (edict_t *ent)
 #endif
 
 // move angles
-	VectorMA (ent->v.angles, host_frametime, ent->v.avelocity, ent->v.angles);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	VectorMA (ent->v.angles, sv_frametime, ent->v.avelocity, ent->v.angles);
 
 // move origin
 #ifdef QUAKE2
 	VectorAdd (ent->v.velocity, ent->v.basevelocity, ent->v.velocity);
 #endif
-	VectorScale (ent->v.velocity, host_frametime, move);
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	VectorScale (ent->v.velocity, sv_frametime, move);
 //	VectorCopy(vec_origin,move);
 	trace = SV_PushEntity (ent, move);
 #ifdef QUAKE2
@@ -2042,7 +2106,11 @@ static void SV_Physics_Step (edict_t *ent)
 					friction = sv_friction.value;
 
 					control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
-					newspeed = speed - host_frametime*control*friction;
+					/*
+						tallustelija:
+						cl_independentphysics
+					*/
+					newspeed = speed - sv_frametime*control*friction;
 
 					if (newspeed < 0)
 						newspeed = 0;
@@ -2055,7 +2123,11 @@ static void SV_Physics_Step (edict_t *ent)
 		}
 
 		VectorAdd (ent->v.velocity, ent->v.basevelocity, ent->v.velocity);
-		SV_FlyMove (ent, host_frametime, NULL);
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		SV_FlyMove (ent, sv_frametime, NULL);
 		VectorSubtract (ent->v.velocity, ent->v.basevelocity, ent->v.velocity);
 
 		// determine if it's on solid ground at all
@@ -2111,7 +2183,11 @@ static void SV_Physics_Step (edict_t *ent)
 
 		SV_AddGravity (ent);
 		SV_CheckVelocity (ent);
-		SV_FlyMove (ent, host_frametime, NULL);
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		SV_FlyMove (ent, sv_frametime, NULL);
 		SV_LinkEdict (ent, true);
 
 	//	if ( (int)ent->v.flags & FL_ONGROUND )	// just hit ground
@@ -2239,7 +2315,11 @@ void SV_Physics (void)
 	if (*sv_globals.force_retouch)
 		(*sv_globals.force_retouch)--;
 
-	sv.time += host_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	sv.time += sv_frametime;
 }
 
 
@@ -2254,8 +2334,16 @@ trace_t SV_Trace_Toss (edict_t *ent, edict_t *ignore)
 //	extern particle_t	*active_particles, *free_particles;
 //	particle_t	*p;
 
-	save_frametime = host_frametime;
-	host_frametime = 0.05;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	save_frametime = sv_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	sv_frametime = 0.05;
 
 	memcpy(&tempent, ent, sizeof(edict_t));
 	tent = &tempent;
@@ -2264,8 +2352,16 @@ trace_t SV_Trace_Toss (edict_t *ent, edict_t *ignore)
 	{
 		SV_CheckVelocity (tent);
 		SV_AddGravity (tent);
-		VectorMA (tent->v.angles, host_frametime, tent->v.avelocity, tent->v.angles);
-		VectorScale (tent->v.velocity, host_frametime, move);
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		VectorMA (tent->v.angles, sv_frametime, tent->v.avelocity, tent->v.angles);
+		/*
+			tallustelija:
+			cl_independentphysics
+		*/
+		VectorScale (tent->v.velocity, sv_frametime, move);
 		VectorAdd (tent->v.origin, move, end);
 		trace = SV_Move (tent->v.origin, tent->v.mins, tent->v.maxs, end, MOVE_NORMAL, tent);
 		VectorCopy (trace.endpos, tent->v.origin);
@@ -2289,7 +2385,11 @@ trace_t SV_Trace_Toss (edict_t *ent, edict_t *ignore)
 				break;
 	}
 //	p->color = 224;
-	host_frametime = save_frametime;
+	/*
+		tallustelija:
+		cl_independentphysics
+	*/
+	sv_frametime = save_frametime;
 	return trace;
 }
 #endif
