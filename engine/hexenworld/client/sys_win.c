@@ -1,6 +1,8 @@
 /*
  * sys_win.c -- Windows system interface code
  * $Id$
+ * 
+ * tallustelija: sys_throttle default changed to 0
  *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 2005-2012  O.Sezer <sezero@users.sourceforge.net>
@@ -39,7 +41,7 @@
 #define NOT_FOCUS_SLEEP		20	/* sleep time when not focus		*/
 
 cvar_t		sys_nostdout = {"sys_nostdout", "0", CVAR_NONE};
-cvar_t		sys_throttle = {"sys_throttle", "0.02", CVAR_ARCHIVE};
+cvar_t		sys_throttle = {"sys_throttle", "0", CVAR_ARCHIVE};	// tallustelija
 
 qboolean	ActiveApp, Minimized;
 qboolean	Win95, Win95old, WinNT, WinVista;

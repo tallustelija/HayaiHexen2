@@ -1,6 +1,8 @@
 /*
  * sys_unix.c -- Unix system interface code
  * $Id$
+ * 
+ * tallustelija: sys_throttle default changed to 0
  *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 2001 contributors of the Anvil of Thyrion project
@@ -59,7 +61,7 @@
 #define MAX_MEM_ALLOC	0x6000000
 
 cvar_t		sys_nostdout = {"sys_nostdout", "0", CVAR_NONE};
-cvar_t		sys_throttle = {"sys_throttle", "0.02", CVAR_ARCHIVE};
+cvar_t		sys_throttle = {"sys_throttle", "0", CVAR_ARCHIVE};	// tallustelija
 
 qboolean		isDedicated;
 static double		starttime;

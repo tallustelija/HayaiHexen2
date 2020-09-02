@@ -2,6 +2,8 @@
  * sys_dos.c -- DOS system interface code.
  * from quake1 source with adaptations for uhexen2.
  * $Id$
+ * 
+ * tallustelija: sys_throttle default changed to 0
  *
  * Copyright (C) 1996-1997  Id Software, Inc.
  *
@@ -80,7 +82,7 @@ static double		oldtime = 0.0;
 #endif	/* ! USE_UCLOCK_TIME */
 
 cvar_t			sys_nostdout = {"sys_nostdout", "0", CVAR_NONE};
-cvar_t			sys_throttle = {"sys_throttle", "0.02", CVAR_ARCHIVE};
+cvar_t			sys_throttle = {"sys_throttle", "0", CVAR_ARCHIVE};	// tallustelija
 
 qboolean		isDedicated;
 

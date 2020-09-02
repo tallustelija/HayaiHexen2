@@ -4,6 +4,8 @@
  * running on the same machine.
  * $Id$
  *
+ * tallustelija: external_ents default changed to 0
+ *
  * This version of model.[ch] are based on the quake dedicated server
  * application lhnqserver by Forest 'LordHavoc' Hale, with simplified
  * data structures and loading only brush models without the textures.
@@ -35,7 +37,7 @@ static char	loadname[MAX_QPATH];	// for hunk tags
 static void Mod_LoadBrushModel (qmodel_t *mod, void *buffer);
 static qmodel_t *Mod_LoadModel (qmodel_t *mod, qboolean crash);
 
-static cvar_t	external_ents = {"external_ents", "1", CVAR_ARCHIVE};
+static cvar_t	external_ents = {"external_ents", "0", CVAR_ARCHIVE};	// tallustelija
 
 static byte	mod_novis[MAX_MAP_LEAFS/8];
 static int	*surfedges;
@@ -54,6 +56,8 @@ Mod_Init
 void Mod_Init (void)
 {
 	Cvar_RegisterVariable (&external_ents);
+	Cvar_Set("external_ents", "0");	// tallustelija
+	Cvar_LockVar("external_ents");	// tallustelija
 
 	memset (mod_novis, 0xff, sizeof(mod_novis));
 }

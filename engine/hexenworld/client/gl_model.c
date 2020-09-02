@@ -4,6 +4,8 @@
  * running on the same machine.
  * $Id$
  *
+ * tallustelija: external_ents default changed to 0
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  *
@@ -37,7 +39,7 @@ static void Mod_LoadAliasModelNew (qmodel_t *mod, void *buffer);
 
 static void Mod_Print (void);
 
-static cvar_t	external_ents = {"external_ents", "1", CVAR_ARCHIVE};
+static cvar_t	external_ents = {"external_ents", "0", CVAR_ARCHIVE};	// tallustelija
 
 static byte	mod_novis[MAX_MAP_LEAFS/8];
 
@@ -59,6 +61,8 @@ Mod_Init
 void Mod_Init (void)
 {
 	Cvar_RegisterVariable (&external_ents);
+	Cvar_Set("external_ents", "0");	// tallustelija
+	Cvar_LockVar("external_ents");	// tallustelija
 	Cmd_AddCommand ("mcache", Mod_Print);
 
 	memset (mod_novis, 0xff, sizeof(mod_novis));
