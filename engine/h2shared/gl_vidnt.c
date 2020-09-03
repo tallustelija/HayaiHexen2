@@ -2,6 +2,8 @@
  * gl_vidnt.c -- NT GL vid component
  * $Id$
  *
+ * tallustelija: rawinput (from NEAQUAKE / JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  * Copyright (C) 1997-1998  Raven Software Corp.
  * Copyright (C) 2005-2016  O.Sezer <sezero@users.sourceforge.net>
@@ -109,6 +111,12 @@ int		window_center_x, window_center_y, window_x, window_y, window_width, window_
 RECT		window_rect;
 static LONG	WindowStyle, ExWindowStyle;
 qboolean	DDActive;
+
+/*
+	tallustelija:
+	rawinput implementation from NEAQUAKE / JoeQuake
+*/
+extern qboolean rawinput;
 
 static PIXELFORMATDESCRIPTOR pfd =
 {
@@ -1656,6 +1664,28 @@ static LRESULT WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 		Key_Event (MapKey(lParam), false);
 		break;
 
+	/*
+		tallustelija:
+		rawinput implementation from NEAQUAKE / JoeQuake
+	*/
+	case WM_INPUT:
+	{
+		RAWINPUT buf;
+		UINT bufsize = sizeof(buf);
+
+		UINT size = GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &buf, &bufsize, sizeof(RAWINPUTHEADER));
+
+		if (size <= sizeof(buf))
+		{
+			if (buf.header.dwType == RIM_TYPEMOUSE)
+			{
+				IN_RawMouseEvent(&buf.data.mouse);
+			}
+		}
+
+		break;
+	}
+
 	// this is complicated because Win32 seems to pack multiple mouse
 	// events into one update sometimes, so we always check all states
 	// and look for events
@@ -1668,38 +1698,52 @@ static LRESULT WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 	case WM_XBUTTONDOWN:
 	case WM_XBUTTONUP:
 	case WM_MOUSEMOVE:
-		temp = 0;
+		/*
+			tallustelija:
+			rawinput implementation from NEAQUAKE / JoeQuake
+		*/
+		if (!rawinput)
+		{
+			temp = 0;
 
-		if (wParam & MK_LBUTTON)
-			temp |= 1;
+			if (wParam & MK_LBUTTON)
+				temp |= 1;
 
-		if (wParam & MK_RBUTTON)
-			temp |= 2;
+			if (wParam & MK_RBUTTON)
+				temp |= 2;
 
-		if (wParam & MK_MBUTTON)
-			temp |= 4;
+			if (wParam & MK_MBUTTON)
+				temp |= 4;
 
-		// intellimouse explorer
-		if (wParam & MK_XBUTTON1)
-			temp |= 8;
+			// intellimouse explorer
+			if (wParam & MK_XBUTTON1)
+				temp |= 8;
 
-		if (wParam & MK_XBUTTON2)
-			temp |= 16;
+			if (wParam & MK_XBUTTON2)
+				temp |= 16;
 
-		IN_MouseEvent (temp);
+			IN_MouseEvent(temp);
 
+		}
 		break;
 
 	case WM_MOUSEWHEEL:
-		if ((short) HIWORD(wParam) > 0)
+		/*
+			tallustelija:
+			rawinput implementation from NEAQUAKE / JoeQuake
+		*/
+		if (!rawinput)
 		{
-			Key_Event(K_MWHEELUP, true);
-			Key_Event(K_MWHEELUP, false);
-		}
-		else
-		{
-			Key_Event(K_MWHEELDOWN, true);
-			Key_Event(K_MWHEELDOWN, false);
+			if ((short)HIWORD(wParam) > 0)
+			{
+				Key_Event(K_MWHEELUP, true);
+				Key_Event(K_MWHEELUP, false);
+			}
+			else
+			{
+				Key_Event(K_MWHEELDOWN, true);
+				Key_Event(K_MWHEELDOWN, false);
+			}
 		}
 		return 0;
 
