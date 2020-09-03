@@ -4,6 +4,8 @@
  * external controllers
  * $Id$
  *
+ * tallustelija: rawinput (from NEAQUAKE / JoeQuake)
+ *
  * Copyright (C) 1996-2001  Id Software, Inc.
  * Copyright (C) 2005-2012  O.Sezer <sezero@users.sourceforge.net>
  * Several bits from darkplaces and the ioquake3 projects
@@ -34,10 +36,11 @@ static cvar_t	m_filter = {"m_filter", "0", CVAR_NONE};
 
 static int		mouse_oldbuttonstate;
 static POINT		current_pos;
-static int		mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
+static double	mouse_x, mouse_y;	// tallustelija: changed from int to double
+static int		old_mouse_x, old_mouse_y, mx_accum, my_accum;
 
 static qboolean	restore_spi;
-static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 0};
+static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};	// tallustelija: max level of accel 1
 			/* [0] threshold to double movement (only if accel level is >= 1)
 			 * [1] threshold to quadruple movement (only if accel level is >= 2)
 			 * [2] maximum level of acceleration (0 = off)
@@ -192,6 +195,8 @@ static JOYINFOEX	ji;
 static void IN_StartupJoystick (void);
 static void Joy_AdvancedUpdate_f (void);
 static void IN_JoyMove (usercmd_t *cmd);
+
+qboolean rawinput;	// tallustelija
 
 
 /*
@@ -459,7 +464,45 @@ static qboolean IN_InitDInput (void)
 		return false;
 	}
 
-	Con_SafePrintf ("DirectInput initialized\n");
+	/*
+		tallustelija:
+		rawinput implementation from NEAQUAKE / JoeQuake
+	*/
+	//Con_SafePrintf ("DirectInput initialized\n");
+	return true;
+}
+
+/*
+	tallustelija:
+	rawinput implementation from NEAQUAKE / JoeQuake
+*/
+qboolean IN_InitRawInput(void)
+{
+	RAWINPUTDEVICE rawdevices[1];
+	memset(rawdevices, 0, sizeof(rawdevices));
+
+	RAWINPUTDEVICE* mouse = &rawdevices[0];
+	mouse->hwndTarget = mainwindow;
+	mouse->usUsagePage = 1;
+
+	/*
+	2 for mouse, 6 for keyboard
+	*/
+	mouse->usUsage = 2;
+
+	/*
+	Can't use RIDEV_NOLEGACY here as it won't create any messages.
+	They are needed for things like moving the window or activating it.
+	*/
+	mouse->dwFlags = 0;
+
+	BOOL res = RegisterRawInputDevices(rawdevices, 1, sizeof(RAWINPUTDEVICE));
+
+	if (!res)
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -503,12 +546,39 @@ static void IN_StartupMouse (void)
 	{
 		dinput_init = IN_InitDInput ();
 		if (!dinput_init)
+		/*
+			tallustelija:
+			rawinput implementation from NEAQUAKE / JoeQuake
+		*/
+		if (dinput_init)
+		{
+			Con_SafePrintf ("DirectInput initialized\n");
+		}
+		else
+		{
 			Con_SafePrintf ("DirectInput initialization failed\n");
+		}
 	}
 
 	if (!dinput_init)
 	{
-		IN_InitWinMouse ();
+		/*
+			tallustelija:
+			rawinput implementation from NEAQUAKE / JoeQuake
+		*/
+		if (COM_CheckParm("-norawinput"))
+			rawinput = false;
+		else
+			rawinput = IN_InitRawInput();
+
+		if (rawinput)
+		{
+			Con_Printf("Raw mouse input initialized\n");
+		}
+		else
+		{
+			IN_InitWinMouse();
+		}
 	}
 
 // if a fullscreen video mode was set before the mouse was initialized,
@@ -603,12 +673,40 @@ void IN_ReInit (void)
 		g_pdi = NULL;
 	}
 	old_mouse_x = old_mouse_y = mx_accum = my_accum = 0;
+	/*
+		tallustelija:
+		rawinput implementation from NEAQUAKE / JoeQuake
+	*/
 	// we only need to re-initialize direct input.
-	// if winmouse is active, nothing is necessary.
+	// if winmouse or rawinput is active, nothing is necessary.
 	if (!dinput_init)
+	{
+		if (COM_CheckParm("-norawinput"))
+			rawinput = false;
+		else
+			rawinput = IN_InitRawInput();
+
+		if (rawinput)
+		{
+			Con_Printf("Raw mouse input initialized\n");
+		}
+		else
+		{
+			IN_InitWinMouse();
+		}
 		return;
+	}
+
 	dinput_init = IN_InitDInput ();
-	if (!dinput_init)
+	/*
+		tallustelija:
+		rawinput implementation from NEAQUAKE / JoeQuake
+	*/
+	if (dinput_init)
+	{
+		Con_SafePrintf("DirectInput initialized\n");
+	}
+	else
 	{
 		Con_SafePrintf ("DirectInput initialization failed\n");
 		IN_InitWinMouse ();
@@ -636,6 +734,55 @@ void IN_MouseEvent (int mstate)
 
 		mouse_oldbuttonstate = mstate;
 	}
+}
+
+/*
+	tallustelija:
+	rawinput implementation from NEAQUAKE / JoeQuake
+*/
+void IN_RawMouseEvent(RAWMOUSE* state)
+{
+	if (!mouseactive)
+	{
+		return;
+	}
+
+	mx_accum += state->lLastX;
+	my_accum += state->lLastY;
+
+	USHORT buttonflags = state->usButtonFlags;
+
+	if (buttonflags & RI_MOUSE_WHEEL)
+	{
+		short delta = (short)state->usButtonData;
+
+		if (delta < 0)
+		{
+			Key_Event(K_MWHEELDOWN, true);
+			Key_Event(K_MWHEELDOWN, false);
+		}
+
+		else
+		{
+			Key_Event(K_MWHEELUP, true);
+			Key_Event(K_MWHEELUP, false);
+		}
+	}
+
+	buttonflags & RI_MOUSE_BUTTON_1_DOWN ? Key_Event(K_MOUSE1, true) : __noop;
+	buttonflags & RI_MOUSE_BUTTON_1_UP ? Key_Event(K_MOUSE1, false) : __noop;
+
+	buttonflags & RI_MOUSE_BUTTON_2_DOWN ? Key_Event(K_MOUSE2, true) : __noop;
+	buttonflags & RI_MOUSE_BUTTON_2_UP ? Key_Event(K_MOUSE2, false) : __noop;
+
+	buttonflags & RI_MOUSE_BUTTON_3_DOWN ? Key_Event(K_MOUSE3, true) : __noop;
+	buttonflags & RI_MOUSE_BUTTON_3_UP ? Key_Event(K_MOUSE3, false) : __noop;
+
+	buttonflags & RI_MOUSE_BUTTON_4_DOWN ? Key_Event(K_MOUSE4, true) : __noop;
+	buttonflags & RI_MOUSE_BUTTON_4_UP ? Key_Event(K_MOUSE4, false) : __noop;
+
+	buttonflags & RI_MOUSE_BUTTON_5_DOWN ? Key_Event(K_MOUSE5, true) : __noop;
+	buttonflags & RI_MOUSE_BUTTON_5_UP ? Key_Event(K_MOUSE5, false) : __noop;
 }
 
 
@@ -744,9 +891,21 @@ static void IN_MouseMove (usercmd_t *cmd)
 	}
 	else
 	{
-		GetCursorPos (&current_pos);
-		mx = current_pos.x - window_center_x + mx_accum;
-		my = current_pos.y - window_center_y + my_accum;
+		/*
+			tallustelija:
+			rawinput implementation from NEAQUAKE / JoeQuake
+		*/
+		if (rawinput)
+		{
+			mx = mx_accum;
+			my = my_accum;
+		}
+		else
+		{
+			GetCursorPos(&current_pos);
+			mx = current_pos.x - window_center_x + mx_accum;
+			my = current_pos.y - window_center_y + my_accum;
+		}
 		mx_accum = 0;
 		my_accum = 0;
 	}
@@ -860,9 +1019,11 @@ IN_Accumulate
 */
 void IN_Accumulate (void)
 {
-	if (dinput_init)
-		return;
-	if (mouseactive)
+	/*
+		tallustelija:
+		rawinput implementation from NEAQUAKE / JoeQuake
+	*/
+	if (mouseactive && !dinput_init && !rawinput)
 	{
 		GetCursorPos (&current_pos);
 

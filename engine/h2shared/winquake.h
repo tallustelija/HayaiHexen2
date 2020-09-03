@@ -2,6 +2,8 @@
  * winquake.h -- Windows-specific Quake header file
  * $Id$
  *
+ * tallustelija: rawinput (from NEAQUAKE / JoeQuake)
+ *
  * Copyright (C) 1996-1997  Id Software, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -61,6 +63,12 @@ extern HWND		mainwindow;
 extern qboolean		ActiveApp, Minimized;
 
 extern qboolean		Win95, Win95old, WinNT, WinVista;
+
+/*
+	tallustelija:
+	rawinput implementation from NEAQUAKE / JoeQuake
+*/
+void IN_RawMouseEvent(RAWMOUSE* state);
 
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
