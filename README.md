@@ -18,12 +18,12 @@ Huge thanks to all of the above developers!
 * fps-independent physics when using 'cl_independentphysics 1' and 'cl_maxfps > 72' (from JoeQuake)
 * changed 'sys_throttle' cvar to be 0 by default (to ensure that fps hits the 'cl_maxfps' limit)
 * changed 'external_ents' cvar to be 0 by default (external level bug fixes are not wanted for speedruns)
+* 'rawinput' as default option for mouse input (implementation from JoeQuake / NEAQUAKE)
 
 ## To do:
 
-* 'rawinput' as default option for mouse input (implementation from JoeQuake / NEAQUAKE)
 * 'cl_demospeed' and 'cl_demorewind' (implementation from JoeQuake)
 * console command history autosaving to a file
 * add a speedrun timer, which accurately measures time for both individual levels and full game runs (implement in HexenC gamecode?)
-* revert gameplay to be authentic with the original CD version of Hexen 2: Portal of Praevus (i.e. revert bugfixes of the HoT source port which alter speedrun gameplay) (requires reverting changes both to the engine and the HexenC gamecode)
+* revert gameplay to be authentic with the original v1.12 version of Hexen 2: Portal of Praevus (i.e. revert bugfixes of the HoT source port which alter speedrun gameplay) (requires reverting changes both to the engine and the HexenC gamecode)
 * various debug tools to aid in speedrun routing
