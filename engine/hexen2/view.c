@@ -76,6 +76,14 @@ cvar_t	show_speed_XYonly = { "show_speed_XYonly", "1", CVAR_ARCHIVE };
 cvar_t show_speed_interval = { "show_speed_interval", "0.05", CVAR_ARCHIVE };
 
 
+/*
+	Xloctis:
+	configurable hud view
+*/
+cvar_t	show_speed_off_y = { "show_speed_off_y", "40", CVAR_ARCHIVE };
+cvar_t	show_speed_off_ytext = { "show_speed_off_ytext", "0", CVAR_ARCHIVE };
+
+
 //=============================================================================
 
 /*
@@ -1054,7 +1062,7 @@ SCR_DrawSpeed
 */
 void SCR_DrawSpeed(void)
 {
-	int		x, y;
+	int		x, y, offset, offsetText;;
 	char		st[8];
 	float		speed, vspeed, speedunits;
 	vec3_t		vel;
@@ -1082,6 +1090,9 @@ void SCR_DrawSpeed(void)
 	if (speed > maxspeed)
 		maxspeed = speed;
 
+	offset = show_speed_off_y.integer;
+	offsetText = show_speed_off_ytext.integer;
+
 	if (display_speed >= 0)
 	{
 		sprintf(st, "%3d", (int)display_speed);
@@ -1100,6 +1111,18 @@ void SCR_DrawSpeed(void)
 		if (cl.intermission)
 			y = vid.height - sb_lines - 16 - 35;
 
+		y = y - offset;
+		int scale = 1;
+
+		Draw_Fill(x, y - (int)(1 * scale), 160, 1, 25);
+		Draw_Fill(x, y + (int)(9 * scale), 160, 1, 25);
+		Draw_Fill(x + (int)(32 * scale), y - (int)(2 * scale), 1, 14, 45);
+		Draw_Fill(x + (int)(64 * scale), y - (int)(2 * scale), 1, 14, 45);
+		Draw_Fill(x + (int)(96 * scale), y - (int)(2 * scale), 1, 14, 45);
+		Draw_Fill(x + (int)(128 * scale), y - (int)(2 * scale), 1, 14, 45);
+
+		Draw_Fill(x, y, 160, 9, 110);
+		/*
 		Draw_Fill(x, y - 1, 160, 1, 26);
 		Draw_Fill(x, y + 9, 160, 1, 26);
 		Draw_Fill(x + 32, y - 2, 1, 13, 26);
@@ -1108,19 +1131,19 @@ void SCR_DrawSpeed(void)
 		Draw_Fill(x + 128, y - 2, 1, 13, 26);
 
 		Draw_Fill(x, y, 160, 9, 100);
-
+		*/
 		speedunits = display_speed;
-		if (display_speed <= 500)
+		if (display_speed <= 830)
 		{
-			Draw_Fill(x, y, (int)(display_speed / 3.125), 9, 165);
+			Draw_Fill(x, y, (int)(display_speed / 5.1875), 9, 140);
 		}
 		else
 		{
-			while (speedunits > 500)
-				speedunits -= 500;
-			Draw_Fill(x, y, (int)(speedunits / 3.125), 9, 132);
+			while (speedunits > 830)
+				speedunits -= 830;
+			Draw_Fill(x, y, (int)(speedunits / 5.1875), 9, 68);
 		}
-		Draw_String(x + 36 - strlen(st) * 8, y, st);
+		Draw_String(x + 36 - strlen(st) * 8+8*7, y - offsetText, st);
 	}
 
 	if (realtime - lastrealtime >= show_speed_interval.value)
@@ -1208,6 +1231,8 @@ void V_Init (void)
 	Cvar_RegisterVariable(&show_speed);
 	Cvar_RegisterVariable(&show_speed_XYonly);
 	Cvar_RegisterVariable(&show_speed_interval);
+	Cvar_RegisterVariable(&show_speed_off_y);
+	Cvar_RegisterVariable(&show_speed_off_ytext);
 
 	Cvar_RegisterVariable (&scr_ofsx);
 	Cvar_RegisterVariable (&scr_ofsy);
