@@ -1,0 +1,18 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/engine/hexen2/Hexen2.sln
+/engine/hexen2/hexen2-x86-asm.vcxproj.filters
+/engine/hexen2/hexen2-x86-asm.vcxproj
+/engine/hexen2/hexen2-noasm.vcxproj.filters
+/engine/hexen2/hexen2-noasm.vcxproj
+/engine/hexen2/hexen2-mgl4.vcxproj.filters
+/engine/hexen2/hexen2-mgl4.vcxproj
+/engine/hexen2/h2ded.vcxproj.filters
+/engine/hexen2/h2ded.vcxproj
+/engine/hexen2/glhexen2.vcxproj.filters
+/engine/hexen2/glhexen2.vcxproj
+/engine/hexen2/.vs/Hexen2/v17
+/engine/hexen2/Build-glh2/
